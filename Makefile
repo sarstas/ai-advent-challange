@@ -19,8 +19,8 @@ PORT          ?= 8080
 
 help: ## Показать список команд
 	@echo "AI Advent Challenge — доступные команды:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-11s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
 env: ## Создать .env из .env.example, если его ещё нет
 	@test -f .env || (cp .env.example .env && echo "✅ Создан .env — впиши в него DEEPSEEK_API_KEY")
@@ -57,7 +57,7 @@ pgadmin: ## Поднять pgAdmin на http://localhost:5050
 
 # ---------------- бэкенд ----------------
 
-be-run: ## Запустить Go-бэкенд на :$(PORT)
+be-run: ## Запустить Go-бэкенд (порт из .env, по умолчанию 8080)
 	cd backend && go run ./cmd/server
 
 be-build: ## Собрать бинарник в backend/bin/server
