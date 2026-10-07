@@ -1,0 +1,47 @@
+name: ai-advent-challange
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: aiadvent-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-aiadvent}
+      POSTGRES_USER: ${POSTGRES_USER:-aiadvent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aiadvent}
+      # ускоряет инициализацию в dev-режиме
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aiadvent} -d ${POSTGRES_DB:-aiadvent}"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+
+  # Веб-морда к БД: docker compose --profile tools up -d pgadmin
+  # http://localhost:5050  (login: admin@local.dev / admin)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: aiadvent-pgadmin
+    profiles: ["tools"]
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  pgadmin:
