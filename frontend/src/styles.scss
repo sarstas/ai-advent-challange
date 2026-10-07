@@ -1,0 +1,11 @@
+/* Глобальные стили: всё остальное живёт в стилях компонентов. */
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #0f1117;
+}

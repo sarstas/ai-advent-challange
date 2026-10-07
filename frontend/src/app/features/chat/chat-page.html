@@ -1,0 +1,147 @@
+<div class="page">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">AI</span>
+      <div>
+        <h1>AI Advent Challenge</h1>
+        <p class="subtitle">Angular 22 → Go → DeepSeek API → PostgreSQL</p>
+      </div>
+    </div>
+    <p class="status" [class.ok]="statusOk()">
+      <span class="dot" aria-hidden="true"></span>
+      {{ statusText() }}
+    </p>
+  </header>
+
+  @if (health()?.api_key === 'missing') {
+    <div class="alert warn" role="alert">
+      <strong>Ключ DeepSeek не задан.</strong>
+      Впиши <code>DEEPSEEK_API_KEY</code> в <code>.env</code> и перезапусти бэкенд
+      (<code>make be-run</code>).
+    </div>
+  }
+
+  <section class="card">
+    <form (submit)="onSubmit($event)">
+      <div class="grid">
+        <label class="field">
+          <span class="label">Модель</span>
+          <select
+            [value]="model()"
+            (change)="onModelChange($event)"
+            [disabled]="loading()"
+          >
+            @for (option of models; track option.id) {
+              <option [value]="option.id">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field grow">
+          <span class="label">Промпт</span>
+          <textarea
+            rows="3"
+            [value]="prompt()"
+            (input)="onPromptInput($event)"
+            (keydown.control.enter)="onSubmit($event)"
+            (keydown.meta.enter)="onSubmit($event)"
+            [disabled]="loading()"
+            placeholder="Например: объясни в двух словах, что такое большая языковая модель"
+          ></textarea>
+        </label>
+      </div>
+
+      <div class="actions">
+        <span class="hint">Ctrl / ⌘ + Enter — отправить</span>
+        <button type="submit" class="primary" [disabled]="!canSend()">
+          @if (loading()) {
+            <span class="spinner" aria-hidden="true"></span>
+            Думает…
+          } @else {
+            Отправить
+          }
+        </button>
+      </div>
+    </form>
+  </section>
+
+  @if (error(); as message) {
+    <div class="alert error" role="alert">{{ message }}</div>
+  }
+
+  @if (answer(); as reply) {
+    <section class="card answer" aria-live="polite" [attr.aria-busy]="loading()">
+      <div class="row">
+        <span class="badge">{{ reply.model }}</span>
+        <span class="meta">
+          {{ reply.usage.total_tokens }} токенов
+          ({{ reply.usage.prompt_tokens }} → {{ reply.usage.completion_tokens }})
+        </span>
+        <span class="meta">{{ reply.latency_ms }} мс</span>
+        <time class="meta">{{ reply.created_at | date: 'HH:mm:ss' }}</time>
+      </div>
+
+      <p class="answer-text">{{ reply.content }}</p>
+
+      <div class="row spread">
+        <span class="meta">запись #{{ reply.id }} сохранена в PostgreSQL</span>
+        <button type="button" class="ghost" (click)="copy(reply.content)">
+          {{ copied() ? 'Скопировано ✓' : 'Копировать' }}
+        </button>
+      </div>
+    </section>
+  }
+
+  <section class="card">
+    <div class="row spread">
+      <h2>История запросов</h2>
+      <div class="row">
+        <span class="meta">
+          всего {{ total() }} · с ошибкой {{ failed() }}
+        </span>
+        <button
+          type="button"
+          class="ghost"
+          (click)="reloadHistory()"
+          [disabled]="loadingHistory()"
+        >
+          {{ loadingHistory() ? 'Обновляю…' : 'Обновить' }}
+        </button>
+      </div>
+    </div>
+
+    @if (history().length === 0) {
+      <p class="empty">Пока пусто — отправь первый промпт, и он появится здесь.</p>
+    } @else {
+      <ul class="list">
+        @for (item of history(); track item.id) {
+          <li [class.failed]="item.status === 'error'">
+            <div class="row">
+              <span class="badge">{{ item.model }}</span>
+              <time class="meta">{{ item.created_at | date: 'dd.MM HH:mm:ss' }}</time>
+              <span class="meta">{{ item.latency_ms }} мс</span>
+              @if (item.status === 'error') {
+                <span class="tag">ошибка</span>
+              }
+            </div>
+            <p class="q">{{ item.prompt }}</p>
+            @if (item.status === 'ok') {
+              <p class="a">{{ item.response }}</p>
+            } @else {
+              <p class="a err">{{ item.error }}</p>
+            }
+            <button type="button" class="ghost small" (click)="reuse(item)">
+              Повторить промпт
+            </button>
+          </li>
+        } @empty {
+          <li class="empty">Записей нет.</li>
+        }
+      </ul>
+    }
+  </section>
+
+  <footer class="footer">
+    Первый проект AI Advent Challenge · Go + Angular + PostgreSQL + DeepSeek
+  </footer>
+</div>
